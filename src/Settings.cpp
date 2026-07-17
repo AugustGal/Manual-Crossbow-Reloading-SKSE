@@ -42,18 +42,27 @@ void Settings::LoadForms()
 
     std::string MCRFileName = "ManualCrossbowReloading.esp";
     std::string BBFileName = "BladeAndBlunt.esp";
+    std::string REQFileName = "Requiem.esp";
 
-    if (!dataHandler->LookupLoadedLightModByName(BBFileName))
+    isBladeAndBluntLoaded = dataHandler->LookupLoadedLightModByName(BBFileName);
+    isRequiemLoaded = dataHandler->LookupLoadedModByName(REQFileName);
+
+    if (!isBladeAndBluntLoaded && !isRequiemLoaded)
     {
         CrossbowStaminaSpell = dataHandler->LookupForm(0x805, MCRFileName)->As<RE::SpellItem>();
         CrossbowStaminaSpellNPC = dataHandler->LookupForm(0x805, MCRFileName)->As<RE::SpellItem>();
     }
-    else 
+
+    if (isBladeAndBluntLoaded)
     {
         logger::info("Loading Blade and Blunt compatibility");
 
-        auto spellForm = dataHandler->LookupForm(ParseFormID("0x873"), BBFileName);
-        
+        auto spellForm = dataHandler->LookupForm(ParseFormID("0x873"), BBFileName);   
+        if (!spellForm)
+        {
+            logger::info("Blade and Blunt player spell form not found");
+        }
+
         CrossbowStaminaSpell = spellForm->As<RE::SpellItem>();
 
         auto spellFormNPC = dataHandler->LookupForm(ParseFormID("0x54"), BBFileName);
@@ -65,14 +74,31 @@ void Settings::LoadForms()
         else
         {
             CrossbowStaminaSpellNPC = spellForm->As<RE::SpellItem>();
+            logger::info("Blade and Blunt NPC spell form not found");
         }
-        
-        isBladeAndBluntLoaded = true;
 
         logger::info("Blade and Blunt compatibility enabled");
+    } 
+    
+    if (isRequiemLoaded)
+    {
+        logger::info("Loading Requiem compatibility");
+
+        auto spellForm = dataHandler->LookupForm(0x6AA964, REQFileName);
+
+        CrossbowStaminaSpell = spellForm->As<RE::SpellItem>();
+
+        if (!spellForm)
+        {
+            logger::info("Requiem spell form not found");
+        }
+
+        logger::info("Requiem compatibility enabled");  
     }
 
 	MCR_IsCrossbowLoaded = dataHandler->LookupForm(0x804, MCRFileName)->As<RE::TESGlobal>();
+    MCR_WPNCrossbowReloadPlayer = dataHandler->LookupForm(0x80A, MCRFileName)->As<RE::BGSSoundDescriptorForm>();
+    MCR_WPNCrossbowReloadQuickShotPerkPlayer = dataHandler->LookupForm(0x80B, MCRFileName)->As<RE::BGSSoundDescriptorForm>();
 
     logger::info("Loaded forms");
 

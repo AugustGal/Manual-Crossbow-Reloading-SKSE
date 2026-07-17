@@ -24,10 +24,13 @@ class Settings
 		float reloadSpeedPerkBonus;
 
 		bool isBladeAndBluntLoaded;
+		bool isRequiemLoaded;
 
 		RE::SpellItem* CrossbowStaminaSpell;
 		RE::SpellItem* CrossbowStaminaSpellNPC;
 		RE::TESGlobal* MCR_IsCrossbowLoaded;
+		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReloadPlayer;
+		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReloadQuickShotPerkPlayer;
 
 	private:		
 

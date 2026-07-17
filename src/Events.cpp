@@ -31,13 +31,12 @@ RE::BSEventNotifyControl AnimEventHandler::ProcessAnimEventPC([[maybe_unused]] R
 {
     if (a_event->holder)
     {
-        uint32_t eventHash = hash(a_event->tag.data(), a_event->tag.length());
 
         RE::Actor* actor = const_cast<RE::Actor*>(a_event->holder->As<RE::Actor>());
 
         if (actor) 
         {
-            CrossbowReloadManager::GetSingleton()->HandleAnimEventPC(eventHash);
+            CrossbowReloadManager::GetSingleton()->HandleAnimEventPC(a_event);
         }
     }
 

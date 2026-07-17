@@ -8,15 +8,19 @@ CrossbowReloadManager* CrossbowReloadManager::GetSingleton()
     return &crossbowReloadManager;
 }
 
-void CrossbowReloadManager::HandleAnimEventPC(uint32_t a_eventHash)
+void CrossbowReloadManager::HandleAnimEventPC(RE::BSAnimationGraphEvent* a_event)
 {
-    switch (a_eventHash)
+    uint32_t eventHash = hash(a_event->tag.data(), a_event->tag.length());
+
+    switch (eventHash)
     {
     case "reload"_h:
     case "ReloadFast"_h:
     {
         auto player = RE::PlayerCharacter::GetSingleton();
-        player->SetGraphVariableBool("IsAttacking", true);
+        player->SetGraphVariableBool("IsAttacking"sv, true);
+        player->AsActorState()->actorState1.meleeAttackState = RE::ATTACK_STATE_ENUM::kBowDraw;
+        pendingReloadSoundPlay = true;
         CastStaminaDrainSpellPlayer();
     }
         break;
@@ -24,19 +28,32 @@ void CrossbowReloadManager::HandleAnimEventPC(uint32_t a_eventHash)
         SetCrossbowLoaded(true);
         break;
     case "arrowAttach"_h:
-        InterruptArrowAttach();
+        InterruptArrowAttach(false);
         break;
     case "SoundPlay"_h:
-        if (pendingRelease)
+    {
+        uint32_t payloadHash = hash(a_event->payload.data(), a_event->payload.length());
+
+        if (payloadHash == "WPNCrossbowReload"_h)
         {
-            FinishRelease();
-            pendingRelease = false;
+            auto player = RE::PlayerCharacter::GetSingleton();
+
+            if (pendingReloadSoundPlay)
+            {
+                PlaySFX(player, Settings::GetSingleton()->MCR_WPNCrossbowReloadPlayer, player->GetPosition(), 1);
+                PlaySFX(player, Settings::GetSingleton()->MCR_WPNCrossbowReloadQuickShotPerkPlayer, player->GetPosition(), 1);
+            }
+            else
+            {
+                player->NotifyAnimationGraph("attackStop"sv);
+            }
+            pendingReloadSoundPlay = false;
         }
+    }
         break;
     case "arrowRelease"_h:
         if (IsCrossbowEquipped())
         {
-           pendingRelease = true;
            SetCrossbowLoaded(false);
         }
         break;
@@ -48,7 +65,24 @@ void CrossbowReloadManager::HandleAnimEventPC(uint32_t a_eventHash)
     case "JumpFallDirectional"_h:
         EvaluateDrawState();
         break;
+    /*
+    case "DisableBumper"_h:
+        if (IsCrossbowEquipped())
+        {
+            if (!IsCrossbowLoaded())
+            {
+                auto player = RE::PlayerCharacter::GetSingleton();
+
+                InterruptArrowAttach(true);
+                player->NotifyAnimationGraph("reloadStop"sv);
+
+            }
+        }
+        EvaluateDrawState();
+        break;
+    */
     }
+    
 }
 
 void CrossbowReloadManager::EvaluateDrawState()
@@ -159,14 +193,7 @@ void CrossbowReloadManager::SetCrossbowLoaded(bool a_loaded)
     Settings::GetSingleton()->MCR_IsCrossbowLoaded->value = a_loaded;
 }
 
-void CrossbowReloadManager::FinishRelease()
-{
-    auto player = RE::PlayerCharacter::GetSingleton();
-
-    player->NotifyAnimationGraph("attackStop"sv);       
-}
-
-void CrossbowReloadManager::InterruptArrowAttach()
+void CrossbowReloadManager::InterruptArrowAttach(bool a_bypassCheck)
 {
     auto player = RE::PlayerCharacter::GetSingleton();
 
@@ -183,7 +210,7 @@ void CrossbowReloadManager::InterruptArrowAttach()
             isJumping = true;
         }
 
-        if (isEquipping || isJumping)
+        if (isEquipping || isJumping || a_bypassCheck)
         {
             auto equipManager = RE::ActorEquipManager::GetSingleton();
             auto equippedAmmo = player->GetCurrentAmmo();
@@ -279,8 +306,15 @@ void CrossbowReloadManager::CastStaminaDrainSpellPlayer()
 {
     auto player = RE::PlayerCharacter::GetSingleton();
 
-    if (!player->IsGodMode())
+    if (!Settings::GetSingleton()->isRequiemLoaded)
     {
-        CastStaminaDrainSpell(player, true);
+        if (!player->IsGodMode())
+        {
+            CastStaminaDrainSpell(player, true);
+        }
+    }
+    else
+    {
+        player->AddSpell(Settings::GetSingleton()->CrossbowStaminaSpell);
     }
 }
