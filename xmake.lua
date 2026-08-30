@@ -4,7 +4,7 @@ add_requires("simpleini")
 
 -- set project
 set_project("ManualCrossbowReloading")
-set_version("1.0.0")
+set_version("2.0.0")
 set_license("GPL-3.0")
 
 -- set defaults

@@ -10,8 +10,8 @@ class Settings
 
 		void LoadSettings();
 
-
 		RE::FormID ParseFormID(const std::string& str);
+		void ProcessReloadSoundForms(RE::BGSSoundDescriptorForm* a_origSoundForm, RE::BGSSoundDescriptorForm* a_newSoundForm, RE::BGSSoundDescriptorForm* a_dummySoundForm);
 
 		inline static bool debug_logging{};
 
@@ -28,10 +28,23 @@ class Settings
 
 		RE::SpellItem* CrossbowStaminaSpell;
 		RE::SpellItem* CrossbowStaminaSpellNPC;
-		RE::TESGlobal* MCR_IsCrossbowLoaded;
-		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReloadPlayer;
-		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReloadQuickShotPerkPlayer;
 
-	private:		
+		RE::TESGlobal* MCR_IsCrossbowLoaded;
+
+		RE::BGSSoundDescriptorForm* WPNCrossbowReload;
+		RE::BGSSoundDescriptorForm* WPNCrossbowReloadQuickShotPerk;
+
+		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReload;
+		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReloadQuickShotPerk;
+
+		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReload_Dummy;
+		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReloadQuickShotPerk_Dummy;
+
+		RE::BGSPerk* QuickShot;
+
+	private:
 
 };
+
+
+

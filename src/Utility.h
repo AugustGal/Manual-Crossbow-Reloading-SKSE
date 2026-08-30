@@ -31,6 +31,7 @@ static inline void PlaySFX(RE::Actor* actor, RE::BGSSoundDescriptorForm* descrip
     audioManager->GetSoundHandle(handle, descriptor);
     if (!handle.IsValid())
         return;
+
     handle.SetPosition(position);
     handle.SetVolume(volume);
     handle.SetObjectToFollow(actor->Get3D());

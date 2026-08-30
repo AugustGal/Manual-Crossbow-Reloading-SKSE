@@ -8,27 +8,95 @@ CrossbowReloadManager* CrossbowReloadManager::GetSingleton()
     return &crossbowReloadManager;
 }
 
-void CrossbowReloadManager::HandleAnimEventPC(RE::BSAnimationGraphEvent* a_event)
+void CrossbowReloadManager::PostLoadMaintenance()
 {
+    auto camera = RE::PlayerCamera::GetSingleton();
+    if (camera->IsInFirstPerson()) 
+    {
+        camera->ForceThirdPerson();
+        SKSE::GetTaskInterface()->AddTask([camera]() 
+            {
+                camera->ForceFirstPerson();
+            });
+    }
+    else 
+    {
+        camera->ForceFirstPerson();
+        SKSE::GetTaskInterface()->AddTask([camera]() 
+            {
+                camera->ForceThirdPerson();
+            });
+    }
+
+    SKSE::GetTaskInterface()->AddTask([this]() 
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            auto player = RE::PlayerCharacter::GetSingleton();
+            if (IsCrossbowEquipped(player) && player->AsActorState()->actorState1.meleeAttackState == RE::ATTACK_STATE_ENUM::kNone)
+            {
+                EvaluateDrawState(player);
+            }
+        });
+}
+
+bool CrossbowReloadManager::HandleAnimEventPC(RE::BSAnimationGraphEvent* a_event)
+{
+    if (!a_event->holder) { return false; }
+
+    RE::Actor* player = const_cast<RE::Actor*>(a_event->holder->As<RE::Actor>());
+
+    if (!player) { return false; }
+
+
     uint32_t eventHash = hash(a_event->tag.data(), a_event->tag.length());
 
     switch (eventHash)
     {
     case "reload"_h:
     case "ReloadFast"_h:
-    {
-        auto player = RE::PlayerCharacter::GetSingleton();
         player->SetGraphVariableBool("IsAttacking"sv, true);
         player->AsActorState()->actorState1.meleeAttackState = RE::ATTACK_STATE_ENUM::kBowDraw;
-        pendingReloadSoundPlay = true;
-        CastStaminaDrainSpellPlayer();
-    }
+        CastStaminaDrainSpellPC();
         break;
     case "reloadStop"_h:
         SetCrossbowLoaded(true);
         break;
     case "arrowAttach"_h:
-        InterruptArrowAttach(false);
+    {
+        if (IsCrossbowEquipped(player) && !IsCrossbowLoaded())
+        {
+            bool isEquipping = false;
+            player->GetGraphVariableBool("IsEquipping"sv, isEquipping);
+
+            if (isEquipping)
+            {
+                return true;
+            }
+        }
+    }
+        break;
+    case "BowRelease"_h:
+    case "BowReleaseFast"_h:
+        if (IsCrossbowEquipped(player))
+        {
+            SetCrossbowLoaded(false);
+        }
+        break;
+    case "bowReset"_h:
+    case "BeginWeaponDraw"_h:
+    case "evaluateDrawState"_h:
+        if (IsCrossbowEquipped(player))
+        {
+            EvaluateDrawState(player);
+        }
+        break;
+    case "attackStop"_h:
+        if (IsCrossbowEquipped(player))
+        {
+            player->NotifyAnimationGraph("reloadStop"sv);
+            EvaluateDrawState(player);
+        }
         break;
     case "SoundPlay"_h:
     {
@@ -36,68 +104,111 @@ void CrossbowReloadManager::HandleAnimEventPC(RE::BSAnimationGraphEvent* a_event
 
         if (payloadHash == "WPNCrossbowReload"_h)
         {
-            auto player = RE::PlayerCharacter::GetSingleton();
-
-            if (pendingReloadSoundPlay)
-            {
-                PlaySFX(player, Settings::GetSingleton()->MCR_WPNCrossbowReloadPlayer, player->GetPosition(), 1);
-                PlaySFX(player, Settings::GetSingleton()->MCR_WPNCrossbowReloadQuickShotPerkPlayer, player->GetPosition(), 1);
-            }
-            else
+            if (player->AsActorState()->actorState1.meleeAttackState != RE::ATTACK_STATE_ENUM::kBowDraw)
             {
                 player->NotifyAnimationGraph("attackStop"sv);
             }
-            pendingReloadSoundPlay = false;
-        }
-    }
-        break;
-    case "arrowRelease"_h:
-        if (IsCrossbowEquipped())
-        {
-           SetCrossbowLoaded(false);
-        }
-        break;
-    case "attackStop"_h:
-    case "BeginWeaponDraw"_h:
-    case "bowReset"_h:
-    case "JumpUp"_h:
-    case "JumpFall"_h:
-    case "JumpFallDirectional"_h:
-        EvaluateDrawState();
-        break;
-    /*
-    case "DisableBumper"_h:
-        if (IsCrossbowEquipped())
-        {
-            if (!IsCrossbowLoaded())
+            else
             {
-                auto player = RE::PlayerCharacter::GetSingleton();
+                auto settings = Settings::GetSingleton();
 
-                InterruptArrowAttach(true);
-                player->NotifyAnimationGraph("reloadStop"sv);
-
+                if (!player->HasPerk(settings->QuickShot))
+                {
+                    PlaySFX(player, settings->MCR_WPNCrossbowReload, player->GetPosition(), 1);
+                }
+                else
+                {
+                    PlaySFX(player, settings->MCR_WPNCrossbowReloadQuickShotPerk, player->GetPosition(), 1);
+                }
             }
         }
-        EvaluateDrawState();
-        break;
-    */
     }
-    
+        break;
+    }
+
+    return false;
 }
 
-void CrossbowReloadManager::EvaluateDrawState()
+void CrossbowReloadManager::HandleNotifyAnimGraphPC(RE::IAnimationGraphManagerHolder* a_graphHolder, [[maybe_unused]] const RE::BSFixedString& a_eventName)
 {
-    if (IsCrossbowEquipped())
+    RE::Actor* player = static_cast<RE::Actor*>(a_graphHolder);
+
+    if (!player) { return; }
+
+
+    uint32_t eventHash = hash(a_eventName.data(), a_eventName.length());
+    
+    switch (eventHash)
     {
-        auto player = RE::PlayerCharacter::GetSingleton();
-        if (IsCrossbowLoaded())
+    case "attackStop"_h: 
+        if (IsCrossbowEquipped(player))
         {
-            player->NotifyAnimationGraph("forceBowDrawn"sv);
+            player->NotifyAnimationGraph("reloadStop"sv);
+            EvaluateDrawState(player);
         }
-        else
+        break;
+    }
+}
+
+void CrossbowReloadManager::HandleAnimEventNPC([[maybe_unused]] RE::BSAnimationGraphEvent* a_event)
+{
+    if (!a_event->holder) { return; }
+
+    RE::Actor* actor = const_cast<RE::Actor*>(a_event->holder->As<RE::Actor>());
+
+    if (!actor) { return; }
+
+
+    uint32_t eventHash = hash(a_event->tag.data(), a_event->tag.length());
+
+    switch (eventHash)
+    {
+    case "evaluateDrawState"_h:
+    case "attackStop"_h: 
+        if (IsCrossbowEquipped(actor))
         {
-            player->NotifyAnimationGraph("forceBowUndrawn"sv);
+            actor->NotifyAnimationGraph("crossbowDrawn"sv);
         }
+        break;
+    case "SoundPlay"_h:
+    {
+        uint32_t payloadHash = hash(a_event->payload.data(), a_event->payload.length());
+
+        if (payloadHash == "WPNCrossbowReload"_h)
+        {
+            auto settings = Settings::GetSingleton();
+
+            if (!actor->HasPerk(settings->QuickShot))
+            {
+                PlaySFX(actor, settings->MCR_WPNCrossbowReload, actor->GetPosition(), 1);
+            }
+            else
+            {
+                PlaySFX(actor, settings->MCR_WPNCrossbowReloadQuickShotPerk, actor->GetPosition(), 1);
+            }
+        }
+    }
+        break;
+    }
+}
+
+void CrossbowReloadManager::HandleNotifyAnimGraphNPC(RE::IAnimationGraphManagerHolder* a_graphHolder, const RE::BSFixedString& a_eventName)
+{
+    RE::Actor* actor = static_cast<RE::Actor*>(a_graphHolder);
+
+    if (!actor) { return; }
+
+
+    uint32_t eventHash = hash(a_eventName.data(), a_eventName.length());
+
+    switch (eventHash)
+    {
+    case "attackStop"_h:
+        if (IsCrossbowEquipped(actor))
+        {
+            actor->NotifyAnimationGraph("crossbowDrawn"sv);
+        }
+        break;
     }
 }
 
@@ -128,6 +239,10 @@ void CrossbowReloadManager::HandleClipGeneratorUpdate(RE::hkbClipGenerator* a_cl
             case "CrossBow_ReleaseDwarvenFast"_h:
             case "SneakCrossBow_ReleaseFast"_h:
             case "SneakCrossBow_ReleaseDwarvenFast"_h:
+            case "CrossBow_ReleaseFastPlayer"_h:
+            case "CrossBow_ReleaseDwarvenFastPlayer"_h:
+            case "SneakCrossBow_ReleaseFastPlayer"_h:
+            case "SneakCrossBow_ReleaseDwarvenFastPlayer"_h:
                 quickDrawBonus = Settings::GetSingleton()->reloadSpeedPerkBonus;
                 break;
 
@@ -164,15 +279,26 @@ void CrossbowReloadManager::HandleWeaponFire(RE::Actor* a_actor, RE::TESObjectWE
 {
     if (!a_actor->IsPlayerRef() && a_weapon->IsCrossbow())
     {
-        CastStaminaDrainSpell(a_actor, false);
+        CastStaminaDrainSpell(a_actor);
     }
 }
 
-bool CrossbowReloadManager::IsCrossbowEquipped() const
+void CrossbowReloadManager::EvaluateDrawState(RE::Actor* a_player)
 {
-    auto player = RE::PlayerCharacter::GetSingleton();
+    if (IsCrossbowLoaded())
+    {
+        a_player->NotifyAnimationGraph("crossbowDrawn"sv);
+    }
+    else
+    {
+        a_player->NotifyAnimationGraph("crossbowUndrawn"sv);
+        a_player->DetachArrow(a_player->AsReference()->GetBiped());
+    }
+}
 
-    auto weaponForm = player->GetEquippedObject(false);
+bool CrossbowReloadManager::IsCrossbowEquipped(RE::Actor* a_actor) const
+{
+    auto weaponForm = a_actor->GetEquippedObject(false);
     if (!weaponForm) { return false; }
     if (!weaponForm->IsWeapon()) { return false; }
 
@@ -182,46 +308,21 @@ bool CrossbowReloadManager::IsCrossbowEquipped() const
     return weapon->IsCrossbow();
 }
 
-
 bool CrossbowReloadManager::IsCrossbowLoaded() const
 {
-    return Settings::GetSingleton()->MCR_IsCrossbowLoaded->value;
+    auto player = RE::PlayerCharacter::GetSingleton();
+
+    bool isCrossbowLoaded = false;
+    player->GetGraphVariableBool("IsCrossbowLoaded"sv, isCrossbowLoaded);
+
+    return isCrossbowLoaded;
 }
 
 void CrossbowReloadManager::SetCrossbowLoaded(bool a_loaded)
 {
-    Settings::GetSingleton()->MCR_IsCrossbowLoaded->value = a_loaded;
-}
-
-void CrossbowReloadManager::InterruptArrowAttach(bool a_bypassCheck)
-{
     auto player = RE::PlayerCharacter::GetSingleton();
 
-    if (IsCrossbowEquipped() && !IsCrossbowLoaded())
-    {
-        bool isEquipping = false;
-        player->GetGraphVariableBool("IsEquipping"sv, isEquipping);
-        bool isJumping = false;
-        
-        switch (player->GetCharController()->wantState)
-        {
-        case RE::hkpCharacterStateType::kJumping:
-        case RE::hkpCharacterStateType::kInAir:
-            isJumping = true;
-        }
-
-        if (isEquipping || isJumping || a_bypassCheck)
-        {
-            auto equipManager = RE::ActorEquipManager::GetSingleton();
-            auto equippedAmmo = player->GetCurrentAmmo();
-
-            if (equippedAmmo)
-            {
-                equipManager->UnequipObject(player, equippedAmmo, nullptr, 1U, nullptr, false, false, false, true);
-                equipManager->EquipObject(player, equippedAmmo, nullptr, 1U, nullptr, true, false, false, false);
-            }
-        }
-    }
+    player->SetGraphVariableBool("IsCrossbowLoaded"sv, a_loaded);
 }
 
 float CrossbowReloadManager::GetReloadStaminaCost(RE::Actor* a_actor)
@@ -277,12 +378,12 @@ float CrossbowReloadManager::GetReloadStaminaCost(RE::Actor* a_actor)
     return cost;
 }
 
-void CrossbowReloadManager::CastStaminaDrainSpell(RE::Actor* a_actor, bool a_isPlayer)
+void CrossbowReloadManager::CastStaminaDrainSpell(RE::Actor* a_actor)
 {
     RE::SpellItem* spell;
     auto settings = Settings::GetSingleton();
 
-    if (a_isPlayer)
+    if (a_actor->IsPlayerRef())
     {
         spell = settings->CrossbowStaminaSpell;
     }
@@ -302,7 +403,7 @@ void CrossbowReloadManager::CastStaminaDrainSpell(RE::Actor* a_actor, bool a_isP
         ->CastSpellImmediate(spell, false, a_actor, 1.0f, false, cost, nullptr);
 }
 
-void CrossbowReloadManager::CastStaminaDrainSpellPlayer()
+void CrossbowReloadManager::CastStaminaDrainSpellPC()
 {
     auto player = RE::PlayerCharacter::GetSingleton();
 
@@ -310,7 +411,7 @@ void CrossbowReloadManager::CastStaminaDrainSpellPlayer()
     {
         if (!player->IsGodMode())
         {
-            CastStaminaDrainSpell(player, true);
+            CastStaminaDrainSpell(player);
         }
     }
     else

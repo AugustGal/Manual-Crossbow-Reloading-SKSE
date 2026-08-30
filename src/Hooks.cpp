@@ -6,7 +6,11 @@ namespace Hooks
 {
 	bool InstallHooks()
 	{
-		if (!AnimEventHandler::InstallHook(AnimEventVtbl_PC)) { return false; }
+		if (!AnimEventHandlerPC::InstallHook(AnimEventVtbl_PC)) { return false; }
+		if (!AnimEventHandlerNPC::InstallHook(AnimEventVtbl_NPC)) { return false; }
+		if (!NotifyAnimGraphHandlerPC::InstallHook(AnimGraphVtbl_PC)) { return false; }
+		if (!NotifyAnimGraphHandlerNPC::InstallHook(AnimGraphVtbl_NPC)) { return false; }
+		// if (!PlayerUpdateHandler::InstallHook(PlayerUpdateVtbl)) { return false; }
 
 		return true;
 	}

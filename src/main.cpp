@@ -1,5 +1,6 @@
 #include "Hooks.h"
 #include "Settings.h"
+#include "CrossbowReloadManager.h"
 
 void InitListener(SKSE::MessagingInterface::Message* a_msg)
 {
@@ -10,25 +11,7 @@ void InitListener(SKSE::MessagingInterface::Message* a_msg)
 		break;
 	case SKSE::MessagingInterface::kPostLoadGame:
 	{
-		auto camera = RE::PlayerCamera::GetSingleton();
-		if (camera->IsInFirstPerson())
-		{
-			camera->ForceThirdPerson();
-			SKSE::GetTaskInterface()->AddTask(
-				[camera]() {
-					camera->ForceFirstPerson();
-
-				});
-		}
-		else
-		{
-			camera->ForceFirstPerson();
-			SKSE::GetTaskInterface()->AddTask(
-				[camera]() {
-					camera->ForceThirdPerson();
-
-				});
-		}
+		CrossbowReloadManager::GetSingleton()->PostLoadMaintenance();
 		break;
 	}
 

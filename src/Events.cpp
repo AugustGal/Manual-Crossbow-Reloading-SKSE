@@ -1,6 +1,7 @@
 #include "Events.h"
 #include "CrossbowReloadManager.h"
 #include "Utility.h"
+#include "Settings.h"
 
 bool WeaponFireHandler::InstallHook(REL::Relocation<uintptr_t> a_relocation)
 {
@@ -19,28 +20,67 @@ void WeaponFireHandler::ProcessWeaponFire(RE::TESObjectWEAP* a_weapon, RE::TESOb
     CrossbowReloadManager::GetSingleton()->HandleWeaponFire(a_source->As<RE::Actor>(), a_weapon);
 }
 
-bool AnimEventHandler::InstallHook(REL::Relocation<uintptr_t> a_relocation) 
+bool AnimEventHandlerPC::InstallHook(REL::Relocation<uintptr_t> a_relocation) 
 {
     _ProcessAnimEvent_PC = a_relocation.write_vfunc(0x1, ProcessAnimEventPC);
 
     return true;
 }
 
-RE::BSEventNotifyControl AnimEventHandler::ProcessAnimEventPC([[maybe_unused]] RE::BSTEventSink<RE::BSAnimationGraphEvent>* a_sink,
+RE::BSEventNotifyControl AnimEventHandlerPC::ProcessAnimEventPC([[maybe_unused]] RE::BSTEventSink<RE::BSAnimationGraphEvent>* a_sink,
     RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource) 
 {
-    if (a_event->holder)
+    bool shouldInterruptEvent = CrossbowReloadManager::GetSingleton()->HandleAnimEventPC(a_event);
+    if (shouldInterruptEvent)
     {
-
-        RE::Actor* actor = const_cast<RE::Actor*>(a_event->holder->As<RE::Actor>());
-
-        if (actor) 
-        {
-            CrossbowReloadManager::GetSingleton()->HandleAnimEventPC(a_event);
-        }
+        RE::BSAnimationGraphEvent event = { "MCR_fakeEvent"sv, a_event->holder, nullptr };
+        return _ProcessAnimEvent_PC(a_sink, &event, a_eventSource);
     }
 
     return _ProcessAnimEvent_PC(a_sink, a_event, a_eventSource);
+}
+
+bool AnimEventHandlerNPC::InstallHook(REL::Relocation<uintptr_t> a_relocation)
+{
+    _ProcessAnimEvent_NPC = a_relocation.write_vfunc(0x1, ProcessAnimEventNPC);
+
+    return true;
+}
+
+RE::BSEventNotifyControl AnimEventHandlerNPC::ProcessAnimEventNPC([[maybe_unused]] RE::BSTEventSink<RE::BSAnimationGraphEvent>* a_sink,
+    RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource)
+{
+    CrossbowReloadManager::GetSingleton()->HandleAnimEventNPC(a_event);
+
+    return _ProcessAnimEvent_NPC(a_sink, a_event, a_eventSource);
+}
+
+bool NotifyAnimGraphHandlerPC::InstallHook(REL::Relocation<uintptr_t> a_relocation)
+{
+    _NotifyAnimGraph_PC = a_relocation.write_vfunc(0x1, NotifyAnimGraphPC);
+
+    return true;
+}
+
+void NotifyAnimGraphHandlerPC::NotifyAnimGraphPC(RE::IAnimationGraphManagerHolder* a_graphHolder, const RE::BSFixedString& a_eventName)
+{
+    CrossbowReloadManager::GetSingleton()->HandleNotifyAnimGraphPC(a_graphHolder, a_eventName);
+
+    return _NotifyAnimGraph_PC(a_graphHolder, a_eventName);
+}
+
+bool NotifyAnimGraphHandlerNPC::InstallHook(REL::Relocation<uintptr_t> a_relocation)
+{
+    _NotifyAnimGraph_NPC = a_relocation.write_vfunc(0x1, NotifyAnimGraphNPC);
+
+    return true;
+}
+
+void NotifyAnimGraphHandlerNPC::NotifyAnimGraphNPC(RE::IAnimationGraphManagerHolder* a_graphHolder, const RE::BSFixedString& a_eventName)
+{
+    CrossbowReloadManager::GetSingleton()->HandleNotifyAnimGraphNPC(a_graphHolder, a_eventName);
+
+    return _NotifyAnimGraph_NPC(a_graphHolder, a_eventName);
 }
 
 bool ClipGeneratorHandler::InstallHook(REL::Relocation<uintptr_t> a_relocation)
@@ -70,6 +110,7 @@ void ClipGeneratorHandler::ProcessClipGeneratorUpdate(RE::hkbClipGenerator* a_cl
                 {
                     CrossbowReloadManager::GetSingleton()->HandleClipGeneratorUpdate(a_clipGenerator, graph, false);
                 }
+
             }
             else
             {
@@ -94,4 +135,16 @@ void ClipGeneratorHandler::ProcessClipGeneratorUpdate(RE::hkbClipGenerator* a_cl
     if (!a_hkbCharacter) { return nullptr; }
 
     return SKSE::stl::adjust_pointer<RE::BShkbAnimationGraph>(a_hkbCharacter, -0xC0);
+}
+
+bool PlayerUpdateHandler::InstallHook(REL::Relocation<uintptr_t> a_relocation)
+{
+    _Update = a_relocation.write_vfunc(0xAD, Update);
+
+    return true;
+}
+
+void PlayerUpdateHandler::Update(RE::Actor* a_this, float a_delta)
+{
+    return _Update(a_this, a_delta);
 }
