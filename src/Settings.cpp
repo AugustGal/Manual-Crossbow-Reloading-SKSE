@@ -24,10 +24,12 @@ void Settings::LoadSettings()
         logger::debug("Debug logging enabled");
     }
 
-    weightIncreasesStaminaCost = ini.GetBoolValue("Settings", "weightIncreasesStaminaCost", true);
-    skillDecreasesStaminaCost = ini.GetBoolValue("Settings", "skillDecreasesStaminaCost", true);
+    weightIncreasesStaminaCost = ini.GetBoolValue("Settings", "weightIncreasesStaminaCost", false);
+    skillDecreasesStaminaCost = ini.GetBoolValue("Settings", "skillDecreasesStaminaCost", false);
     staminaCostBase = std::stof(ini.GetValue("Settings", "staminaCostBase", "0.0"));
     staminaCostMult = std::stof(ini.GetValue("Settings", "staminaCostMult", "1.0"));
+
+    disableReloadOnEquip = ini.GetBoolValue("Settings", "disableReloadOnEquip", true);
 
     reloadSpeedPerkBonus = std::stof(ini.GetValue("Settings", "reloadSpeedPerkBonus", "0.3"));
 
@@ -112,6 +114,14 @@ void Settings::LoadForms()
 
     QuickShot = dataHandler->LookupForm(0x105F19, "Skyrim.esm")->As<RE::BGSPerk>();
 
+    ReloadRoot = dataHandler->LookupForm(0x590E, "Dawnguard.esm")->As<RE::TESIdleForm>();
+
+    // Disable vanilla forced reload when equpping/switching bolts
+    if (disableReloadOnEquip)
+    {
+        ReloadRoot->animEventName = ""sv;
+    }
+
     logger::info("Loaded forms");
 }
 
@@ -140,10 +150,10 @@ void Settings::ProcessReloadSoundForms(RE::BGSSoundDescriptorForm* a_origSoundFo
 
     auto* newStandardSound = static_cast<RE::BGSStandardSoundDef*>(newSoundDescriptor);
 
-    // Copy over the conditions to fully disable the original sound form.
+    // Copy over the conditions to fully disable the original reload sound form.
     origStandardSound->conditions = dummyStandardSound->conditions;
 
-    // Copy over the settings from the original sound form, for patches.
+    // Copy over the settings from the original reload sound form, for patches.
     newStandardSound->category = origStandardSound->category;
     newStandardSound->soundCharacteristics = origStandardSound->soundCharacteristics;
     newStandardSound->alternateSoundFormID = origStandardSound->alternateSoundFormID;

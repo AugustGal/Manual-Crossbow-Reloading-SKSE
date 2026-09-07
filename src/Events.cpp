@@ -69,20 +69,6 @@ void NotifyAnimGraphHandlerPC::NotifyAnimGraphPC(RE::IAnimationGraphManagerHolde
     return _NotifyAnimGraph_PC(a_graphHolder, a_eventName);
 }
 
-bool NotifyAnimGraphHandlerNPC::InstallHook(REL::Relocation<uintptr_t> a_relocation)
-{
-    _NotifyAnimGraph_NPC = a_relocation.write_vfunc(0x1, NotifyAnimGraphNPC);
-
-    return true;
-}
-
-void NotifyAnimGraphHandlerNPC::NotifyAnimGraphNPC(RE::IAnimationGraphManagerHolder* a_graphHolder, const RE::BSFixedString& a_eventName)
-{
-    CrossbowReloadManager::GetSingleton()->HandleNotifyAnimGraphNPC(a_graphHolder, a_eventName);
-
-    return _NotifyAnimGraph_NPC(a_graphHolder, a_eventName);
-}
-
 bool ClipGeneratorHandler::InstallHook(REL::Relocation<uintptr_t> a_relocation)
 {
     _ProcessClipGeneratorUpdate = a_relocation.write_vfunc(0x05, ProcessClipGeneratorUpdate);
@@ -110,7 +96,6 @@ void ClipGeneratorHandler::ProcessClipGeneratorUpdate(RE::hkbClipGenerator* a_cl
                 {
                     CrossbowReloadManager::GetSingleton()->HandleClipGeneratorUpdate(a_clipGenerator, graph, false);
                 }
-
             }
             else
             {

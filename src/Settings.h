@@ -26,6 +26,8 @@ class Settings
 		bool isBladeAndBluntLoaded;
 		bool isRequiemLoaded;
 
+		bool disableReloadOnEquip;
+
 		RE::SpellItem* CrossbowStaminaSpell;
 		RE::SpellItem* CrossbowStaminaSpellNPC;
 
@@ -39,6 +41,8 @@ class Settings
 
 		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReload_Dummy;
 		RE::BGSSoundDescriptorForm* MCR_WPNCrossbowReloadQuickShotPerk_Dummy;
+
+		RE::TESIdleForm* ReloadRoot;
 
 		RE::BGSPerk* QuickShot;
 

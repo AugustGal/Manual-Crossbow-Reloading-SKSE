@@ -48,82 +48,74 @@ bool CrossbowReloadManager::HandleAnimEventPC(RE::BSAnimationGraphEvent* a_event
 
     if (!player) { return false; }
 
-
-    uint32_t eventHash = hash(a_event->tag.data(), a_event->tag.length());
-
-    switch (eventHash)
+    if (IsCrossbowEquipped(player))
     {
-    case "reload"_h:
-    case "ReloadFast"_h:
-        player->SetGraphVariableBool("IsAttacking"sv, true);
-        player->AsActorState()->actorState1.meleeAttackState = RE::ATTACK_STATE_ENUM::kBowDraw;
-        CastStaminaDrainSpellPC();
-        break;
-    case "reloadStop"_h:
-        SetCrossbowLoaded(true);
-        break;
-    case "arrowAttach"_h:
-    {
-        if (IsCrossbowEquipped(player) && !IsCrossbowLoaded())
-        {
-            bool isEquipping = false;
-            player->GetGraphVariableBool("IsEquipping"sv, isEquipping);
+        uint32_t eventHash = hash(a_event->tag.data(), a_event->tag.length());
 
-            if (isEquipping)
+        switch (eventHash)
+        {
+        case "reload"_h:
+        case "ReloadFast"_h:
+            player->SetGraphVariableBool("IsAttacking"sv, true);
+            player->AsActorState()->actorState1.meleeAttackState = RE::ATTACK_STATE_ENUM::kBowDraw;
+            CastStaminaDrainSpellPC();
+            break;
+        case "reloadStop"_h:
+            SetCrossbowLoaded(true);
+            break;
+        case "arrowAttach"_h:
+        {
+            if (!IsCrossbowLoaded())
             {
-                return true;
-            }
-        }
-    }
-        break;
-    case "BowRelease"_h:
-    case "BowReleaseFast"_h:
-        if (IsCrossbowEquipped(player))
-        {
-            SetCrossbowLoaded(false);
-        }
-        break;
-    case "bowReset"_h:
-    case "BeginWeaponDraw"_h:
-    case "evaluateDrawState"_h:
-        if (IsCrossbowEquipped(player))
-        {
-            EvaluateDrawState(player);
-        }
-        break;
-    case "attackStop"_h:
-        if (IsCrossbowEquipped(player))
-        {
-            player->NotifyAnimationGraph("reloadStop"sv);
-            EvaluateDrawState(player);
-        }
-        break;
-    case "SoundPlay"_h:
-    {
-        uint32_t payloadHash = hash(a_event->payload.data(), a_event->payload.length());
+                bool isEquipping;
+                player->GetGraphVariableBool("IsEquipping"sv, isEquipping);
 
-        if (payloadHash == "WPNCrossbowReload"_h)
-        {
-            if (player->AsActorState()->actorState1.meleeAttackState != RE::ATTACK_STATE_ENUM::kBowDraw)
-            {
-                player->NotifyAnimationGraph("attackStop"sv);
-            }
-            else
-            {
-                auto settings = Settings::GetSingleton();
-
-                if (!player->HasPerk(settings->QuickShot))
+                if (isEquipping)
                 {
-                    PlaySFX(player, settings->MCR_WPNCrossbowReload, player->GetPosition(), 1);
+                    return true;
+                }
+            }
+        }
+            break;
+        case "BowRelease"_h:
+        case "BowReleaseFast"_h:
+            SetCrossbowLoaded(false);
+            break;
+        case "bowReset"_h:
+        case "BeginWeaponDraw"_h:
+        case "attackStop"_h:
+            EvaluateDrawState(player);
+            break;
+        case "SoundPlay"_h:
+        {
+            uint32_t payloadHash = hash(a_event->payload.data(), a_event->payload.length());
+
+            if (payloadHash == "WPNCrossbowReload"_h)
+            {
+                bool isReloading;
+                player->GetGraphVariableBool("IsReloading", isReloading);
+
+                if (isReloading)
+                {
+                    auto settings = Settings::GetSingleton();
+
+                    if (!player->HasPerk(settings->QuickShot))
+                    {
+                        PlaySFX(player, settings->MCR_WPNCrossbowReload, player->GetPosition(), 1);
+                    }
+                    else
+                    {
+                        PlaySFX(player, settings->MCR_WPNCrossbowReloadQuickShotPerk, player->GetPosition(), 1);
+                    }
                 }
                 else
                 {
-                    PlaySFX(player, settings->MCR_WPNCrossbowReloadQuickShotPerk, player->GetPosition(), 1);
+                    player->NotifyAnimationGraph("attackStop"sv);
                 }
             }
         }
-    }
-        break;
+            break;
+        }
     }
 
     return false;
@@ -143,7 +135,6 @@ void CrossbowReloadManager::HandleNotifyAnimGraphPC(RE::IAnimationGraphManagerHo
     case "attackStop"_h: 
         if (IsCrossbowEquipped(player))
         {
-            player->NotifyAnimationGraph("reloadStop"sv);
             EvaluateDrawState(player);
         }
         break;
@@ -163,13 +154,6 @@ void CrossbowReloadManager::HandleAnimEventNPC([[maybe_unused]] RE::BSAnimationG
 
     switch (eventHash)
     {
-    case "evaluateDrawState"_h:
-    case "attackStop"_h: 
-        if (IsCrossbowEquipped(actor))
-        {
-            actor->NotifyAnimationGraph("crossbowDrawn"sv);
-        }
-        break;
     case "SoundPlay"_h:
     {
         uint32_t payloadHash = hash(a_event->payload.data(), a_event->payload.length());
@@ -188,26 +172,6 @@ void CrossbowReloadManager::HandleAnimEventNPC([[maybe_unused]] RE::BSAnimationG
             }
         }
     }
-        break;
-    }
-}
-
-void CrossbowReloadManager::HandleNotifyAnimGraphNPC(RE::IAnimationGraphManagerHolder* a_graphHolder, const RE::BSFixedString& a_eventName)
-{
-    RE::Actor* actor = static_cast<RE::Actor*>(a_graphHolder);
-
-    if (!actor) { return; }
-
-
-    uint32_t eventHash = hash(a_eventName.data(), a_eventName.length());
-
-    switch (eventHash)
-    {
-    case "attackStop"_h:
-        if (IsCrossbowEquipped(actor))
-        {
-            actor->NotifyAnimationGraph("crossbowDrawn"sv);
-        }
         break;
     }
 }
@@ -254,6 +218,9 @@ void CrossbowReloadManager::HandleClipGeneratorUpdate(RE::hkbClipGenerator* a_cl
         {
             switch (generatorNameHash)
             {
+            case "CrossBow Reload.hkx"_h:
+                break;
+
             case "CrossBow Reload Fast"_h:
             case "ReleaseFast"_h:
                 quickDrawBonus = Settings::GetSingleton()->reloadSpeedPerkBonus;

@@ -67,18 +67,6 @@ class NotifyAnimGraphHandlerPC
         inline static REL::Relocation<decltype(NotifyAnimGraphPC)> _NotifyAnimGraph_PC;
 };
 
-class NotifyAnimGraphHandlerNPC
-{
-    public:
-        static bool InstallHook(REL::Relocation<uintptr_t> a_relocation);
-
-    private:
-
-        static void NotifyAnimGraphNPC(RE::IAnimationGraphManagerHolder* a_graphHolder, const RE::BSFixedString& a_eventName);
-
-        inline static REL::Relocation<decltype(NotifyAnimGraphNPC)> _NotifyAnimGraph_NPC;
-};
-
 class PlayerUpdateHandler
 {
     public:

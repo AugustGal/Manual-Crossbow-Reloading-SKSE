@@ -13,7 +13,4 @@ namespace Hooks
     inline REL::Relocation<uintptr_t> vtblhkbClipGenerator { RE::VTABLE_hkbClipGenerator[0] };
 
     inline REL::Relocation<uintptr_t> AnimGraphVtbl_PC{ RE::VTABLE_PlayerCharacter[3] };
-    inline REL::Relocation<uintptr_t> AnimGraphVtbl_NPC{ RE::VTABLE_Character[3] };
-
-    inline REL::Relocation<uintptr_t> PlayerUpdateVtbl{ RE::VTABLE_PlayerCharacter[0] };
 }
