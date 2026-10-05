@@ -9,6 +9,7 @@
 build/
 lib/
 vsxmake2022/
+extern/
 vs*/
 
 # files
