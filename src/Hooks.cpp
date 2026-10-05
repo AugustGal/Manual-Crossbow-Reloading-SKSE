@@ -17,11 +17,6 @@ namespace Hooks
 	{
 		if (!ClipGeneratorHandler::InstallHook(vtblhkbClipGenerator)) { return false; }
 
-		if (!Settings::GetSingleton()->isRequiemLoaded)
-		{
-			if (!WeaponFireHandler::InstallHook(arrow_release_handler)) { return false; }
-		}
-
 		return true;
 	}
 }

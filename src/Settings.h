@@ -31,8 +31,6 @@ class Settings
 		RE::SpellItem* CrossbowStaminaSpell;
 		RE::SpellItem* CrossbowStaminaSpellNPC;
 
-		RE::TESGlobal* MCR_IsCrossbowLoaded;
-
 		RE::BGSSoundDescriptorForm* WPNCrossbowReload;
 		RE::BGSSoundDescriptorForm* WPNCrossbowReloadQuickShotPerk;
 

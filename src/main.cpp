@@ -42,7 +42,6 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 
 	logger::info("{} {} is loading...", name, version);
 
-	SKSE::AllocTrampoline(14);
 	Settings::GetSingleton()->LoadSettings();
 
 	if (!Hooks::InstallHooks())

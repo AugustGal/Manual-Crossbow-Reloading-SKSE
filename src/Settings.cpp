@@ -98,8 +98,6 @@ void Settings::LoadForms()
         logger::info("Requiem compatibility enabled");  
     }
 
-    MCR_IsCrossbowLoaded = dataHandler->LookupForm(0x804, MCRFileName)->As<RE::TESGlobal>();
-
     WPNCrossbowReload = dataHandler->LookupForm(0x8E3A, "Dawnguard.esm")->As<RE::BGSSoundDescriptorForm>();
     WPNCrossbowReloadQuickShotPerk = dataHandler->LookupForm(0x18BC4, "Dawnguard.esm")->As<RE::BGSSoundDescriptorForm>();
 

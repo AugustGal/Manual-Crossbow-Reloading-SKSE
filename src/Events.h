@@ -1,18 +1,5 @@
 #pragma once
 
-class WeaponFireHandler
-{
-    public:
-
-        static bool InstallHook(REL::Relocation<uintptr_t> a_relocation);
-
-    private:
-
-        static void ProcessWeaponFire(RE::TESObjectWEAP* a_weapon, RE::TESObjectREFR* a_source, RE::TESAmmo* a_ammo, RE::EnchantmentItem* a_ammoEnchantment, RE::AlchemyItem* a_poison);
-
-        inline static REL::Relocation<decltype(ProcessWeaponFire)> _ProcessWeapon_Fire;
-};
-
 class AnimEventHandlerPC
 {
     public:
@@ -67,18 +54,4 @@ class NotifyAnimGraphHandlerPC
         inline static REL::Relocation<decltype(NotifyAnimGraphPC)> _NotifyAnimGraph_PC;
 };
 
-class PlayerUpdateHandler
-{
-    public:
-        static bool InstallHook(REL::Relocation<uintptr_t> a_relocation);
-
-    private:
-
-        static void Update(RE::Actor* a_this, float a_delta);
-
-        inline static REL::Relocation<decltype(Update)> _Update;
-
-        inline static float stepsCounter = 0.0f;
-};
-
-[[nodiscard]] RE::BShkbAnimationGraph* GetGraphFromCharacter(RE::hkbCharacter* a_hkbCharacter);
+RE::BShkbAnimationGraph* GetGraphFromCharacter(RE::hkbCharacter* a_hkbCharacter);

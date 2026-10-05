@@ -11,12 +11,7 @@ class CrossbowReloadManager
         bool HandleAnimEventPC(RE::BSAnimationGraphEvent* a_event);
         void HandleAnimEventNPC(RE::BSAnimationGraphEvent* a_event);
         void HandleNotifyAnimGraphPC(RE::IAnimationGraphManagerHolder* a_graphHolder, const RE::BSFixedString& a_eventName);
-        void HandleNotifyAnimGraphNPC(RE::IAnimationGraphManagerHolder* a_graphHolder, const RE::BSFixedString& a_eventName);
-        void HandleWeaponFire(RE::Actor* a_source, RE::TESObjectWEAP* a_weapon);
-        void HandleClipGeneratorUpdate(RE::hkbClipGenerator* a_clipGenerator, RE::BShkbAnimationGraph* a_graph,
-            bool a_isCrossbowWeapon);
-
-
+        void HandleClipGeneratorUpdate(RE::hkbClipGenerator* a_clipGenerator, RE::BShkbAnimationGraph* a_graph);
 
     private:
 
