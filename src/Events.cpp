@@ -59,11 +59,9 @@ bool ClipGeneratorHandler::InstallHook(REL::Relocation<uintptr_t> a_relocation)
 
 void ClipGeneratorHandler::ProcessClipGeneratorUpdate(RE::hkbClipGenerator* a_clipGenerator, const RE::hkbContext& a_context, float a_timesteps)
 {
-    if (a_context.character)
+    if (a_context.character && a_clipGenerator)
     {
-        auto graph = GetGraphFromCharacter(a_context.character);
-
-        if (graph && a_clipGenerator)
+        if (auto graph = GetGraphFromCharacter(a_context.character))
         {
             CrossbowReloadManager::GetSingleton()->HandleClipGeneratorUpdate(a_clipGenerator, graph);
         }

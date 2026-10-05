@@ -126,7 +126,7 @@ bool CrossbowReloadManager::HandleAnimEventPC(RE::BSAnimationGraphEvent* a_event
     return false;
 }
 
-void CrossbowReloadManager::HandleNotifyAnimGraphPC(RE::IAnimationGraphManagerHolder* a_graphHolder, [[maybe_unused]] const RE::BSFixedString& a_eventName)
+void CrossbowReloadManager::HandleNotifyAnimGraphPC(RE::IAnimationGraphManagerHolder* a_graphHolder, const RE::BSFixedString& a_eventName)
 {
     RE::Actor* player = static_cast<RE::Actor*>(a_graphHolder);
 
@@ -146,7 +146,7 @@ void CrossbowReloadManager::HandleNotifyAnimGraphPC(RE::IAnimationGraphManagerHo
     }
 }
 
-void CrossbowReloadManager::HandleAnimEventNPC([[maybe_unused]] RE::BSAnimationGraphEvent* a_event)
+void CrossbowReloadManager::HandleAnimEventNPC(RE::BSAnimationGraphEvent* a_event)
 {
     if (!a_event->holder) { return; }
 
@@ -193,14 +193,13 @@ void CrossbowReloadManager::HandleAnimEventNPC([[maybe_unused]] RE::BSAnimationG
 void CrossbowReloadManager::HandleClipGeneratorUpdate(RE::hkbClipGenerator* a_clipGenerator, RE::BShkbAnimationGraph* a_graph)
 {
     uint32_t generatorNameHash = hash(a_clipGenerator->name.data(), a_clipGenerator->name.length());
-    auto actor = a_graph->holder;
 
     float quickDrawBonus = 0.0f;
     static float perkBonus = Settings::GetSingleton()->reloadSpeedPerkBonus;
 
-    if (actor)
+    if (auto actor = a_graph->holder)
     {
-        int rightHandType;
+        int rightHandType = 0;
         a_graph->GetGraphVariableInt("iRightHandType"sv, rightHandType);
 
         if (rightHandType == 12)
@@ -256,11 +255,11 @@ void CrossbowReloadManager::HandleClipGeneratorUpdate(RE::hkbClipGenerator* a_cl
             default:
                 return;
             }
-            break;
+        break;
         }
     }
 
-    float weaponSpeedMult;
+    float weaponSpeedMult = 1.0f;
     a_graph->GetGraphVariableFloat("weaponSpeedMult"sv, weaponSpeedMult);
 
     a_clipGenerator->playbackSpeed = weaponSpeedMult + quickDrawBonus;
